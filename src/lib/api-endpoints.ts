@@ -18,3 +18,7 @@ export const AUTH_ENDPOINTS = {
   SIGN_OUT: '/admin/auth/sign-out',
   REFRESH: '/admin/auth/refresh',
 } as const
+
+export const DASHBOARD_ENDPOINTS = {
+  STATS: '/admin/dashboard/stats',
+} as const

@@ -1,7 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from '@/routes/ProtectedRoute'
 import { LoginPage } from '@/pages/LoginPage'
-import { DashboardPlaceholder } from '@/pages/DashboardPlaceholder'
+import { DashboardPage } from '@/pages/DashboardPage'
 
 /**
  * Configuración central del router.
@@ -10,10 +10,11 @@ import { DashboardPlaceholder } from '@/pages/DashboardPlaceholder'
  * Produce un objeto router que se pasa a `<RouterProvider>` en main.tsx.
  *
  * Estructura de rutas:
- * - /admin/login      → Página de login (pública)
- * - /admin/*          → Rutas protegidas (requieren auth)
- *   - /admin/dashboard  → Dashboard (placeholder por ahora)
- * - *                 → Cualquier otra ruta redirige a login
+ * - /admin/login        → Página de login (pública)
+ * - /admin              → Redirige a /admin/dashboard
+ * - /admin/*            → Rutas protegidas (requieren auth, usan AdminLayout)
+ *   - /admin/dashboard  → Dashboard con stats del sistema
+ * - *                   → Cualquier otra ruta redirige a login
  */
 export const router = createBrowserRouter([
   {
@@ -25,12 +26,21 @@ export const router = createBrowserRouter([
     element: <ProtectedRoute />,
     children: [
       {
+        index: true,
+        element: <Navigate to="/admin/dashboard" replace />,
+      },
+      {
         path: 'dashboard',
-        element: <DashboardPlaceholder />,
+        element: <DashboardPage />,
       },
       // Futuras rutas protegidas van aquí:
       // { path: 'users', element: <UsersPage /> },
       // { path: 'providers', element: <ProvidersPage /> },
+      // { path: 'appointments', element: <AppointmentsPage /> },
+      // { path: 'locations', element: <LocationsPage /> },
+      // { path: 'specialties', element: <SpecialtiesPage /> },
+      // { path: 'faqs', element: <FaqsPage /> },
+      // { path: 'contact-submissions', element: <ContactSubmissionsPage /> },
     ],
   },
   {

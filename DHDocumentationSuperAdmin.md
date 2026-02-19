@@ -275,3 +275,101 @@ El plugin `react-refresh/only-export-components` requiere que los archivos `.tsx
 - El `createContext()` vive en `auth-context.ts` (archivo .ts, no .tsx)
 - El `AuthProvider` componente vive en `AuthContext.tsx`
 - El hook `useAuth` vive en `hooks/useAuth.ts`
+
+---
+
+## 2026-02-19 — Admin Layout + Dashboard (sección 4.2)
+
+### Decisiones de diseño
+
+| Decisión | Opción elegida | Alternativa descartada |
+|---|---|---|
+| Color del sidebar | Navy sólido `#1C2A3A` (`bg-navy`) | Gradiente rojo `#E53935` → `#9E2A28` |
+| Comportamiento al colapsar | Colapsar a iconos (~64px) | Ocultar completamente |
+| Estado del sidebar | `useState` local en `AdminLayout` | React Context (innecesario, ningún otro componente lo necesita) |
+| Dónde vive el AdminLayout | Dentro de `ProtectedRoute` envolviendo `<Outlet />` | Como layout route separado en el router |
+| Dashboard como feature | `features/dashboard/` con hook, componentes y types | Solo una página sin feature folder |
+| Logo en sidebar | Logo2.png (corazón) + texto blanco "DirectHealth" | Logo1.png (no funciona sobre fondo navy, el texto es navy) |
+
+### Arquitectura del layout
+
+```
+┌──────────┬──────────────────────────┐
+│          │  Header (nombre + avatar) │
+│ Sidebar  ├──────────────────────────┤
+│ (navy)   │                          │
+│ 240px    │   Content (children)     │
+│ ↔ 64px   │   bg-gray-50, scroll     │
+│          │                          │
+└──────────┴──────────────────────────┘
+
+ProtectedRoute → AdminLayout → <Outlet />
+                                  ↓
+                           DashboardPage (u otra página protegida)
+```
+
+**¿Por qué `AdminLayout` envuelve `<Outlet />` dentro de `ProtectedRoute`?**
+Todas las rutas protegidas comparten el mismo layout (sidebar + header). En lugar de envolver cada página individualmente, `ProtectedRoute` aplica el layout una sola vez. Esto simplifica la configuración del router y evita repetición.
+
+### Conceptos nuevos de React usados
+
+**`useEffect` para data fetching:**
+A diferencia de `useSignIn` (que se dispara manualmente con un submit), `useDashboardStats` usa `useEffect` para hacer el fetch automáticamente cuando el componente se monta. El patrón `cancelled` flag previene race conditions si el componente se desmonta antes de que termine el fetch.
+
+**`NavLink` de react-router-dom:**
+Similar a `<Link>` pero con un callback `className={({ isActive }) => ...}` que permite aplicar estilos diferentes al item de navegación que corresponde a la ruta actual. Ideal para sidebars y navigation bars.
+
+**Clase `group` de Tailwind:**
+Permite que elementos hijos reaccionen al hover del padre. Se usa en `QuickAccessCard`: cuando el mouse pasa sobre la card, el icono cambia de color con `group-hover:bg-navy`.
+
+### Feature: Dashboard (`src/features/dashboard/`)
+
+| Archivo | Propósito |
+|---|---|
+| `types.ts` | Interface `DashboardStats` — mapea respuesta de `GET /api/admin/dashboard/stats` |
+| `hooks/useDashboardStats.ts` | Hook con fetch automático al montar. Expone `{ stats, isLoading, error }` |
+| `components/StatCard.tsx` | Card de estadística: icono en círculo coloreado, valor con `toLocaleString`, skeleton loader |
+| `components/QuickAccessCard.tsx` | Card con `<Link>` a cada sección del admin, con hover effect |
+| `index.ts` | Barrel export de la feature |
+
+### Layout (`src/layouts/`)
+
+| Archivo | Propósito |
+|---|---|
+| `Sidebar.tsx` | Sidebar navy colapsable (240px ↔ 64px). 8 NavLinks con active state. Logo2.png arriba, collapse toggle y Sign Out abajo |
+| `AdminLayout.tsx` | Layout principal: sidebar + header (nombre admin + `IconUserCircle` avatar) + content area con scroll |
+
+### Página
+
+| Archivo | Propósito |
+|---|---|
+| `src/pages/DashboardPage.tsx` | 6 stat cards (Users, Providers, Appointments, Upcoming, Locations, Specialties) + 7 quick access cards |
+
+### Archivos modificados
+
+| Archivo | Cambio |
+|---|---|
+| `src/lib/api-endpoints.ts` | Agregado `DASHBOARD_ENDPOINTS.STATS` (`/admin/dashboard/stats`) |
+| `src/routes/ProtectedRoute.tsx` | `<Outlet />` envuelto en `<AdminLayout>` |
+| `src/routes/router.tsx` | Reemplazado `DashboardPlaceholder` por `DashboardPage`. Agregado index redirect `/admin` → `/admin/dashboard` |
+
+### Archivos eliminados
+
+| Archivo | Razón |
+|---|---|
+| `src/pages/DashboardPlaceholder.tsx` | Reemplazado por `DashboardPage`. Sign Out migrado al Sidebar |
+
+### Estructura de rutas actualizada
+
+| Ruta | Componente | Layout | Acceso |
+|---|---|---|---|
+| `/admin/login` | `LoginPage` | `AuthLayout` (centrado) | Público |
+| `/admin` | Redirect → `/admin/dashboard` | — | — |
+| `/admin/dashboard` | `DashboardPage` | `AdminLayout` (sidebar + header) | Protegido |
+| `*` | Redirect → `/admin/login` | — | — |
+
+### Endpoints de API utilizados
+
+| Constante | Ruta | Método | Respuesta |
+|---|---|---|---|
+| `DASHBOARD_ENDPOINTS.STATS` | `/admin/dashboard/stats` | GET | `{ totalUsers, totalProviders, totalAppointments, appointmentsByStatus, totalLocations, totalSpecialties }` |
