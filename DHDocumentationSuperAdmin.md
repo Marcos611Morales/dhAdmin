@@ -373,3 +373,76 @@ Permite que elementos hijos reaccionen al hover del padre. Se usa en `QuickAcces
 | Constante | Ruta | Método | Respuesta |
 |---|---|---|---|
 | `DASHBOARD_ENDPOINTS.STATS` | `/admin/dashboard/stats` | GET | `{ totalUsers, totalProviders, totalAppointments, appointmentsByStatus, totalLocations, totalSpecialties }` |
+
+---
+
+## 2026-02-19 — Refresh Token automático (complemento sección 4.1)
+
+### Problema
+
+El access token expira cada 15 minutos. Sin refresh automático, al expirar el token cualquier petición a la API fallaba con 401 y el usuario tenía que hacer login de nuevo manualmente.
+
+### Solución implementada
+
+Se agregó un **response interceptor** en `api-client.ts` que intercepta errores 401 y automáticamente refresca el token usando `POST /api/admin/auth/refresh`.
+
+### Flujo del refresh automático
+
+```
+Petición normal → 401 Unauthorized
+                      ↓
+            ¿Es endpoint de auth? (/admin/auth/*)
+            SÍ → No refrescar (evita loops). Lanzar ApiError
+            NO ↓
+            ¿Ya se reintentó esta petición? (_retry flag)
+            SÍ → No refrescar. Lanzar ApiError
+            NO ↓
+            ¿Hay otro refresh en progreso?
+            SÍ → Encolar petición en failedQueue. Esperar.
+            NO ↓
+            Llamar POST /admin/auth/refresh con refreshToken
+                      ↓
+            ¿Refresh exitoso?
+            SÍ → Guardar nuevos tokens en localStorage
+                 Procesar cola (reintentar peticiones encoladas)
+                 Reintentar petición original con nuevo token
+            NO → Limpiar localStorage (clearAuthStorage)
+                 Procesar cola con error
+                 Redirigir a /admin/login (full page reload)
+```
+
+### Conceptos nuevos usados
+
+**Cola de peticiones (`failedQueue`):**
+Cuando múltiples peticiones fallan con 401 al mismo tiempo (ej: el dashboard hace fetch de stats y otra sección pide datos simultáneamente), solo la PRIMERA dispara el refresh. Las demás se encolan como promesas pendientes. Cuando el refresh termina, todas las peticiones encoladas se reintentan automáticamente con el nuevo token. Esto evita hacer múltiples refreshes innecesarios.
+
+**Flag `_retry` en la config de axios:**
+Cada petición que se reintenta se marca con `_retry = true` en su config. Si el reintento también recibe 401 (no debería pasar, pero por seguridad), el interceptor no intenta refrescar de nuevo, evitando loops infinitos.
+
+**`axios.post` directo vs `apiClient.post`:**
+La llamada de refresh usa `axios.post` directamente (no `apiClient.post`) para evitar que los interceptors del `apiClient` interfieran. Si usáramos `apiClient.post`, el request interceptor agregaría el access token expirado, y el response interceptor podría intentar refrescar recursivamente si el refresh falla con 401.
+
+**`window.location.href` para forzar logout:**
+Cuando el refresh falla (refresh token también expirado), se usa `window.location.href = '/admin/login'` en vez de `navigate()` de React Router. Esto causa un **full page reload** que reinicia completamente el estado de React. Al recargar, `AuthProvider` lee de localStorage (ya limpio), `admin` es `null`, y la app muestra el login. No se puede usar `navigate()` porque `api-client.ts` es plain TypeScript fuera del árbol de React.
+
+### Decisiones de diseño
+
+| Decisión | Opción elegida | Alternativa descartada |
+|---|---|---|
+| Dónde vive la lógica de refresh | Response interceptor en `api-client.ts` | Hook `useRefreshToken` en React (no tendría acceso a todas las peticiones) |
+| Cómo manejar múltiples 401 | Cola de promesas (`failedQueue`) | Dejar que cada petición haga su propio refresh (desperdicio, race conditions) |
+| Cómo forzar logout al fallar | `window.location.href` (page reload) | Custom event + listener en AuthProvider (más complejo, mismo resultado) |
+| Tipo de RefreshResponse | Interface local en `api-client.ts` | Importar `SignInResponse` de `features/auth` (crearía acoplamiento feature → lib) |
+| Cómo evitar loops infinitos | Flag `_retry` + check `isAuthEndpoint` | WeakSet de configs reintentadas (no funciona porque axios crea nuevas configs) |
+
+### Archivos modificados
+
+| Archivo | Cambio |
+|---|---|
+| `src/lib/api-client.ts` | Response interceptor reescrito: ahora detecta 401, refresca token automáticamente, encola peticiones concurrentes, y fuerza logout si el refresh falla. Nuevos imports: `getRefreshToken`, `setRefreshToken`, `setStoredAdmin`, `clearAuthStorage` de storage.ts, `AUTH_ENDPOINTS` de api-endpoints.ts |
+
+### Endpoints de API utilizados
+
+| Constante | Ruta | Método | Body | Respuesta |
+|---|---|---|---|---|
+| `AUTH_ENDPOINTS.REFRESH` | `/admin/auth/refresh` | POST | `{ refreshToken }` | `{ accessToken, refreshToken, admin }` |
