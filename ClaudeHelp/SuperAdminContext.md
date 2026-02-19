@@ -72,6 +72,8 @@ COMMIT;
 **Seed de un super admin inicial:**
 ```sql
 -- Usar bcrypt hash para el password en el backend
+-- node -e "const bcrypt = require('bcrypt'); bcrypt.hash('CONTRASEÑA', 10).then(h => console.log(h))"
+
 INSERT INTO super_admins (email, password_hash, first_name, last_name)
 VALUES ('admin@directhealth.com', '<bcrypt_hash_aqui>', 'Super', 'Admin');
 ```

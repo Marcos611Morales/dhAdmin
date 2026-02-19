@@ -1,68 +1,94 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+/* ================================================================
+   Direct Healthcare Admin — Design System
+   Tailwind CSS v4 (CSS-first configuration)
+   ================================================================
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+   En Tailwind v4, toda la personalización se hace en CSS con @theme.
+   No se necesita tailwind.config.js. El bloque @theme define variables
+   CSS que generan utilidades automáticamente.
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+   Ejemplo: definir --color-navy: #1C2A3A crea utilidades como
+   bg-navy, text-navy, border-navy, etc.
+
+   Muchos grises del Design System ya coinciden con el default de Tailwind:
+     gray-50  = #F9FAFB   (input bg)
+     gray-100 = #F3F4F6   (light gray bg)
+     gray-200 = #E5E7EB   (dividers, border light)
+     gray-300 = #D1D5DB   (border default)
+     gray-400 = #9CA3AF   (placeholder, disabled, icons)
+     gray-500 = #6B7580   (secondary text)
+     emerald-500 = #10B981 (success)
+
+   Solo se definen tokens custom para colores que NO existen en Tailwind.
+   ================================================================ */
+
+@import "tailwindcss";
+
+/* ─── Custom Theme Tokens ─── */
+@theme {
+  /* ─── Font Family ───
+     Sobreescribe --font-sans para que todas las utilidades de Tailwind
+     que usan font-sans (incluyendo el body por defecto) usen Inter. */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+
+  /* ─── Colores Brand ─── */
+  --color-brand-red: #E53935;
+  --color-brand-red-dark: #9E2A28;
+  --color-navy: #1C2A3A;
+
+  /* ─── Colores Semánticos ─── */
+  --color-link: #1877F2;
+  --color-text-black: #1E1E1E;
+  --color-notification-body: #414153;
+  --color-icon-popup: #6B7280;
+  --color-empty-state: #6A7282;
+
+  /* ─── Colores de Badges / Status ─── */
+  --color-badge-upcoming-bg: #DBEAFE;
+  --color-badge-upcoming-text: #155DFC;
+  --color-badge-cancelled-bg: #FFE2E2;
+  --color-badge-cancelled-text: #E53935;
+  --color-badge-available-bg: #DCFCE7;
+  --color-badge-available-text: #10B981;
+  --color-badge-booked-bg: #FFEDD4;
+  --color-badge-booked-text: #F54900;
+
+  /* ─── Colores de Iconos de Notificación ─── */
+  --color-noti-blue: #155DFC;
+  --color-noti-orange: #F54900;
+  --color-noti-green: #00A63E;
+  --color-noti-purple: #9810FA;
+  --color-noti-pink: #E7000B;
+  --color-noti-gray: #4A5565;
+
+  /* ─── Sombras ─── */
+  --shadow-card: 0 1px 5px rgba(28, 42, 58, 0.1);
+  --shadow-modal: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
+/* ─── Estilos Base ───
+   @layer base asegura que estos estilos tengan la especificidad correcta
+   en el sistema de capas de Tailwind. Se aplican globalmente pero pueden
+   ser sobreescritos por cualquier clase de utilidad. */
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
+  body {
+    font-family: var(--font-sans);
+    font-weight: 400;
+    line-height: 1.5;
+    color: var(--color-navy);
     background-color: #ffffff;
   }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
+
+  /* Focus visible accesible (accesibilidad) */
+  :focus-visible {
+    outline: 2px solid var(--color-navy);
+    outline-offset: 2px;
   }
 }
