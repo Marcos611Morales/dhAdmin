@@ -169,3 +169,109 @@ try {
 | `package.json` | Agregada dependencia `axios` |
 | `src/lib/api-error.ts` | Creado — Tipos de error NestJS, clase ApiError, HTTP status codes |
 | `src/lib/api-client.ts` | Creado — Instancia axios con baseURL e interceptor de errores |
+
+---
+
+## 2026-02-19 — Registro de endpoints de API
+
+### Archivo creado: `src/lib/api-endpoints.ts`
+
+Archivo centralizado con las rutas de todos los endpoints del backend como constantes `as const`. Las rutas son relativas a la baseURL del `apiClient` (no incluyen `/api`).
+
+**Endpoints incluidos (Auth Admin — sección 4.1):**
+
+| Constante | Ruta | Método HTTP |
+|---|---|---|
+| `AUTH_ENDPOINTS.SIGN_IN` | `/admin/auth/sign-in` | POST |
+| `AUTH_ENDPOINTS.SIGN_OUT` | `/admin/auth/sign-out` | POST |
+| `AUTH_ENDPOINTS.REFRESH` | `/admin/auth/refresh` | POST |
+
+| Archivo | Acción |
+|---|---|
+| `src/lib/api-endpoints.ts` | Creado — Constantes de endpoints de Auth Admin |
+
+---
+
+## 2026-02-19 — Login Page + Sistema de Autenticación
+
+### Paquetes instalados
+
+| Paquete | Versión | Razón |
+|---------|---------|-------|
+| `react-router-dom` | 7.13.0 | Client-side routing (login vs rutas protegidas) |
+| `@tabler/icons-react` | 3.36.1 | Librería de iconos del proyecto (IconEye/IconEyeOff para toggle password) |
+
+### Arquitectura implementada
+
+```
+Flujo de autenticación:
+
+1. Usuario abre la app → router redirige a /admin/login
+2. LoginForm llama POST /api/admin/auth/sign-in vía useSignIn hook
+3. Respuesta exitosa → AuthContext guarda tokens + admin en localStorage
+4. Router detecta admin !== null → permite acceso a rutas protegidas
+5. Request interceptor en api-client.ts adjunta JWT automáticamente
+
+localStorage ←→ AuthContext (React state)
+     ↑                    ↑
+     |                    |
+api-client.ts        Componentes React
+(lee token)       (leen admin, signIn, signOut)
+```
+
+**¿Por qué localStorage y no Context para el interceptor?**
+El interceptor de axios es plain TypeScript fuera del árbol de React — no puede usar hooks. Lee el token directamente de localStorage. El AuthContext escribe a localStorage y actualiza React state simultáneamente, manteniendo ambos sincronizados.
+
+### Archivos creados
+
+#### Feature: Auth (`src/features/auth/`)
+
+| Archivo | Propósito |
+|---|---|
+| `types.ts` | Interfaces: `AdminUser`, `SignInRequest`, `SignInResponse`, `AuthContextValue` |
+| `context/auth-context.ts` | `createContext<AuthContextValue>` (separado del Provider por regla ESLint react-refresh) |
+| `context/AuthContext.tsx` | `AuthProvider` — React Context Provider que sincroniza state + localStorage |
+| `hooks/useAuth.ts` | Hook `useAuth()` — consume el AuthContext |
+| `hooks/useSignIn.ts` | Hook `useSignIn()` — llamada API con `isLoading`, `error`, `signIn()` |
+| `components/LoginForm.tsx` | Formulario: email, password (con toggle show/hide), botón submit, error display |
+| `index.ts` | Barrel export de la feature |
+
+#### Infraestructura
+
+| Archivo | Propósito |
+|---|---|
+| `src/lib/storage.ts` | Helpers tipados para localStorage (tokens + admin data). Keys con prefijo `dh_` |
+| `src/layouts/AuthLayout.tsx` | Layout centrado con card blanca y Logo1.png (logo con nombre) |
+| `src/pages/LoginPage.tsx` | Página de login. Redirige a dashboard si ya está autenticado |
+| `src/pages/DashboardPlaceholder.tsx` | Placeholder temporal post-login con botón Sign Out |
+| `src/routes/ProtectedRoute.tsx` | Guard: redirige a login si `admin` es null, renderiza `<Outlet />` si autenticado |
+| `src/routes/router.tsx` | Configuración de rutas con `createBrowserRouter` |
+
+### Archivos modificados
+
+| Archivo | Cambio |
+|---|---|
+| `src/lib/api-client.ts` | Agregado request interceptor que adjunta `Authorization: Bearer` desde localStorage |
+| `src/main.tsx` | Reemplazado `<App />` con `<AuthProvider>` + `<RouterProvider>` |
+| `package.json` | Agregadas dependencias `react-router-dom` y `@tabler/icons-react` |
+
+### Archivos eliminados
+
+| Archivo | Razón |
+|---|---|
+| `src/App.tsx` | Reemplazado por el sistema de rutas. El router maneja todo el rendering |
+
+### Estructura de rutas
+
+| Ruta | Componente | Acceso |
+|---|---|---|
+| `/admin/login` | `LoginPage` | Público |
+| `/admin/dashboard` | `DashboardPlaceholder` | Protegido (requiere auth) |
+| `*` | Redirect → `/admin/login` | — |
+
+### Nota sobre ESLint react-refresh
+
+El plugin `react-refresh/only-export-components` requiere que los archivos `.tsx` exporten solo componentes React. Por eso:
+- El `createContext()` vive en `auth-context.ts` (archivo .ts, no .tsx)
+- El `AuthProvider` componente vive en `AuthContext.tsx`
+- El hook `useAuth` vive en `hooks/useAuth.ts`

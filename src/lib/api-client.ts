@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { API_BASE_URL } from '@/lib/config'
 import { ApiError } from '@/lib/api-error'
+import { getAccessToken } from '@/lib/storage'
 
 /**
  * Instancia de axios preconfigurada para el backend de DirectHealth.
@@ -22,6 +23,22 @@ export const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+})
+
+/**
+ * Interceptor de request — adjunta el JWT token a cada petición.
+ *
+ * Lee el token de localStorage (no del React Context) porque este código
+ * es plain TypeScript fuera del árbol de React. El AuthContext y este
+ * interceptor comparten la misma fuente de verdad (localStorage) a través
+ * de las funciones en storage.ts.
+ */
+apiClient.interceptors.request.use((config) => {
+  const token = getAccessToken()
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
 })
 
 /**
