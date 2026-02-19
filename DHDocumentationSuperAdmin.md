@@ -93,3 +93,79 @@ Registro de cambios y decisiones técnicas del Super Admin Panel de DirectHealth
 | `src/App.css` | Eliminado (boilerplate) |
 | `public/vite.svg` | Eliminado (boilerplate) |
 | `src/assets/react.svg` | Eliminado (boilerplate) |
+
+---
+
+## 2026-02-19 — Configuración de URLs de API
+
+### Archivo creado: `src/lib/config.ts`
+
+Archivo centralizado para manejar las URLs base de la API según el entorno:
+
+- **Development:** `http://localhost:3000` (se usa automáticamente con `pnpm dev`)
+- **Production:** Pendiente de definir (placeholder `aqui_debe_de_ir_la_url_a_produccion`)
+
+Usa `import.meta.env.DEV` de Vite para detectar el entorno automáticamente. No se necesitan archivos `.env`.
+
+**Uso en el proyecto:**
+```ts
+import { API_BASE_URL } from '@/lib/config'
+```
+
+| Archivo | Acción |
+|---|---|
+| `src/lib/config.ts` | Creado — URLs de API por entorno |
+
+---
+
+## 2026-02-19 — Cliente HTTP (axios) y manejo de errores
+
+### Paquetes instalados
+
+| Paquete | Versión | Razón |
+|---------|---------|-------|
+| `axios` | 1.13.5 | Cliente HTTP con interceptors para manejo centralizado de auth y errores |
+
+### Archivos creados
+
+#### `src/lib/api-error.ts`
+
+Manejo tipado de errores del backend:
+
+- **`HTTP_STATUS`** — Constantes `as const` con los códigos HTTP que devuelve el backend (400, 401, 404, 409, 422, 500)
+- **`ApiError`** — Clase que extiende `Error` con `statusCode` y `errors` (array de mensajes). Parsea el formato default de NestJS: `{ statusCode, message, error }`
+- **`isApiError()`** — Type guard para usar en bloques `catch` con tipo `unknown`
+
+#### `src/lib/api-client.ts`
+
+Instancia de axios preconfigurada:
+
+- **baseURL:** `${API_BASE_URL}/api` (lee de `config.ts`)
+- **Content-Type:** `application/json` por defecto
+- **Interceptor de respuesta:** Transforma errores HTTP en `ApiError` tipados. Errores de red (sin respuesta del servidor) se convierten en `ApiError` con `statusCode: 0`
+
+**Uso:**
+```ts
+import { apiClient } from '@/lib/api-client'
+import { isApiError, HTTP_STATUS } from '@/lib/api-error'
+
+// GET request tipado
+const { data } = await apiClient.get<User[]>('/admin/users')
+
+// Manejo de errores
+try {
+  await apiClient.post('/admin/auth/sign-in', body)
+} catch (error) {
+  if (isApiError(error)) {
+    if (error.statusCode === HTTP_STATUS.UNAUTHORIZED) {
+      // Credenciales inválidas
+    }
+  }
+}
+```
+
+| Archivo | Acción |
+|---|---|
+| `package.json` | Agregada dependencia `axios` |
+| `src/lib/api-error.ts` | Creado — Tipos de error NestJS, clase ApiError, HTTP status codes |
+| `src/lib/api-client.ts` | Creado — Instancia axios con baseURL e interceptor de errores |

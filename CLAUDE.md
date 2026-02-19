@@ -24,6 +24,7 @@ Read these files for full project context:
 - `ClaudeHelp/SuperAdminContext.md` — Complete spec: screens, API endpoints, design system, DB schema
 - `ClaudeHelp/CreacionBaseDeDatos.md` — PostgreSQL schema, ER diagram, SQL migrations
 - `ClaudeHelp/DHDocumentation.md` — Existing REST API endpoints (user-facing)
+- `ClaudeHelp/SADHDocumentation.md` — Existing REST API endpoints for Super Admin
 
 ## Architecture
 
