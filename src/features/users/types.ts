@@ -30,6 +30,35 @@ export interface User {
  * Todos son opcionales — si no se envían, el backend usa sus defaults
  * (page=1, limit=50, sin filtros).
  */
+/**
+ * Body del POST /api/admin/users para crear un nuevo usuario.
+ *
+ * Mapea exactamente lo que espera el backend.
+ * `isEmailVerified` se incluye porque aunque no se muestra en el form,
+ * se envía como `false` por defecto.
+ *
+ * Validaciones del backend:
+ * - firstName: required, max 50
+ * - middleName: optional, max 50
+ * - lastName: required, max 50
+ * - email: required, valid email, unique
+ * - password: required, min 8
+ * - dateOfBirth: optional, format YYYY-MM-DD
+ * - gender: optional, valor de gender_type enum
+ * - isEmailVerified: optional, default false
+ */
+export interface CreateUserPayload {
+  firstName: string
+  middleName?: string
+  lastName: string
+  email: string
+  password: string
+  dateOfBirth?: string
+  gender?: Gender
+  profileImageUrl?: string
+  isEmailVerified: boolean
+}
+
 export interface UsersQueryParams {
   page?: number
   limit?: number

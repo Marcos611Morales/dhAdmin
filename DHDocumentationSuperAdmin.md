@@ -605,3 +605,143 @@ La API devuelve `gender: null` para usuarios que no han configurado su género. 
 | Constante | Ruta | Método | Query Params | Respuesta |
 |---|---|---|---|---|
 | `USER_ENDPOINTS.LIST` | `/admin/users` | GET | `page`, `limit`, `search`, `gender`, `isEmailVerified`, `includeDeleted` | `PaginatedResponse<User>` |
+
+---
+
+## 2026-02-19 — Add new User: Formulario de creación (sección 4.4)
+
+### Objetivo
+
+Crear la vista "Add new User" accesible desde el sub-menú del Sidebar (`/admin/users/new`). Formulario completo para crear usuarios vía `POST /api/admin/users` con validación client-side, calendario personalizado para fecha de nacimiento, y popup de éxito.
+
+### Paquete instalado
+
+| Paquete | Versión | Razón |
+|---------|---------|-------|
+| `react-datepicker` | 9.1.0 | Calendario personalizado para selección de fecha de nacimiento. Incluye tipos TypeScript built-in. Su CSS se importa en `index.css`. |
+
+### Decisiones de diseño
+
+| Decisión | Opción elegida | Razón |
+|---|---|---|
+| Post-creación | Popup de éxito + limpiar formulario | Permite crear múltiples usuarios sin navegar |
+| Confirmación de password | Sí, campo "Confirm Password" | Mayor seguridad contra typos |
+| Date picker | `react-datepicker` (librería) | Calendario personalizado estilizable (no nativo del browser) |
+| Botón Cancel | No | El usuario navega con el Sidebar |
+| `isEmailVerified` | No se muestra, se envía `false` | Decisión del usuario: no necesita control manual |
+
+### Conceptos nuevos de React
+
+#### Patrón "Mutation Hook" vs "Query Hook"
+
+Los hooks que ya teníamos (`useUsers`, `useDashboardStats`) son **query hooks** — hacen fetch automático al montar el componente con `useEffect`. Son para **lectura** de datos.
+
+`useCreateUser` es un **mutation hook** — NO ejecuta nada al montarse. Solo expone una función (`createUser()`) que el componente llama cuando el usuario hace submit. Es para **escritura** de datos.
+
+```tsx
+// Query hook: fetch automático al montar
+useEffect(() => { fetchUsers() }, [fetchUsers])
+
+// Mutation hook: NO tiene useEffect, solo expone la función
+const { createUser } = useCreateUser()
+// Se llama manualmente: await createUser(payload)
+```
+
+#### Handler genérico con computed property names
+
+En vez de crear un handler separado para cada input del formulario (handleFirstNameChange, handleEmailChange, etc.), se usa un solo handler con **computed property names** de ES6:
+
+```tsx
+function handleChange(field: keyof FormState, value: string) {
+  setForm(prev => ({ ...prev, [field]: value }))
+}
+
+// [field] es "computed property name":
+// handleChange('email', 'john@test.com')
+// equivale a: { ...prev, email: 'john@test.com' }
+```
+
+`keyof FormState` genera el union type `'firstName' | 'middleName' | 'lastName' | ...`, así TypeScript detecta typos en tiempo de compilación.
+
+#### Validación en dos niveles
+
+1. **Client-side (antes del submit):** Campos vacíos, formato de email, longitud de password, coincidencia de passwords. Da feedback instantáneo sin request.
+2. **Server-side (después del submit):** Email duplicado (409), errores de validación del backend (400). Se muestran en el error banner.
+
+#### `e.preventDefault()` en formularios
+
+Cuando un `<form>` tiene un botón `type="submit"`, el browser por defecto hace un "form submit" que recarga la página. `e.preventDefault()` cancela ese comportamiento. En React siempre manejamos el submit manualmente para tener control total.
+
+#### Patrón children en FormField
+
+El componente `FormField` usa el patrón "children" para envolver cualquier tipo de input:
+
+```tsx
+<FormField label="Email" required error={errors.email}>
+  <input type="email" ... />
+</FormField>
+
+<FormField label="Date of Birth">
+  <DatePicker ... />
+</FormField>
+```
+
+Esto permite reutilizar la estructura (label + error message) sin importar qué tipo de input contiene.
+
+#### `formatDateForApi` — timezone safety
+
+`toISOString().slice(0, 10)` parece la forma obvia de formatear una fecha a "YYYY-MM-DD", pero puede fallar:
+- El DatePicker devuelve un Date en timezone local (ej: "Jul 8, 1992 00:00 UTC-5")
+- `toISOString()` convierte a UTC → "1992-07-08T05:00:00.000Z" → slice → "1992-07-08" ✓ (en este caso funciona)
+- Pero si fuera "Jul 8, 1992 23:00 UTC+5" → UTC = "Jul 9 04:00" → "1992-07-09" ✗ (día incorrecto!)
+
+Por eso se usan `getFullYear()`, `getMonth()`, `getDate()` que respetan el timezone local.
+
+### Archivos creados
+
+| Archivo | Descripción |
+|---|---|
+| `src/features/users/hooks/useCreateUser.ts` | Mutation hook para POST /api/admin/users. Expone `createUser(payload)` → `Promise<User \| null>`, `isLoading`, `error`, `fieldErrors` |
+| `src/features/users/components/SuccessModal.tsx` | Modal genérico de éxito con ícono verde, título, mensaje y botón "Ok". Focus management y Escape key. |
+| `src/pages/CreateUserPage.tsx` | Formulario de creación de usuario. 7 campos (3 nombres, email, 2 passwords, fecha de nacimiento, gender). Validación client-side, calendar picker, submit con spinner. |
+
+### Archivos modificados
+
+| Archivo | Cambio |
+|---|---|
+| `src/features/users/types.ts` | Agregada `CreateUserPayload` interface |
+| `src/features/users/index.ts` | Agregados exports: `useCreateUser`, `CreateUserPayload` |
+| `src/lib/api-endpoints.ts` | Agregado `USER_ENDPOINTS.CREATE` (`/admin/users`) |
+| `src/routes/router.tsx` | Agregada ruta `users/new` → `CreateUserPage` |
+| `src/index.css` | Agregado import del CSS de react-datepicker |
+| `package.json` / `pnpm-lock.yaml` | Nueva dependencia `react-datepicker` |
+
+### Estructura de rutas actualizada
+
+| Ruta | Componente | Layout | Acceso |
+|---|---|---|---|
+| `/admin/login` | `LoginPage` | `AuthLayout` (centrado) | Público |
+| `/admin` | Redirect → `/admin/dashboard` | — | — |
+| `/admin/dashboard` | `DashboardPage` | `AdminLayout` (sidebar + header) | Protegido |
+| `/admin/users` | `UsersPage` | `AdminLayout` (sidebar + header) | Protegido |
+| `/admin/users/new` | `CreateUserPage` | `AdminLayout` (sidebar + header) | Protegido |
+| `*` | Redirect → `/admin/login` | — | — |
+
+### Endpoints de API utilizados
+
+| Constante | Ruta | Método | Body | Respuesta |
+|---|---|---|---|---|
+| `USER_ENDPOINTS.CREATE` | `/admin/users` | POST | `CreateUserPayload` (firstName, lastName, email, password, middleName?, dateOfBirth?, gender?, isEmailVerified) | `User` (201 Created) |
+
+### Validaciones del formulario
+
+| Campo | Tipo | Requerido | Validación client-side | Validación server-side |
+|---|---|---|---|---|
+| First Name | text | Sí | No vacío, max 50 chars | max 50 |
+| Middle Name | text | No | max 50 chars | max 50 |
+| Last Name | text | Sí | No vacío, max 50 chars | max 50 |
+| Email | email | Sí | No vacío, regex básico | Formato válido, único (409 si duplicado) |
+| Password | password | Sí | No vacío, min 8 chars | min 8 |
+| Confirm Password | password | Sí | No vacío, debe coincidir con Password | — (no se envía al backend) |
+| Date of Birth | DatePicker | No | No puede ser fecha futura (maxDate) | Formato YYYY-MM-DD |
+| Gender | select | No | — | Valor de gender_type enum |

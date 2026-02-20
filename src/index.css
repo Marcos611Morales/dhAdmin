@@ -24,6 +24,12 @@
 
 @import "tailwindcss";
 
+/* ─── Third-party CSS ───
+   react-datepicker requiere su CSS propio para funcionar correctamente.
+   Esto NO viola la regla de "solo Tailwind" — es CSS de una librería
+   de terceros, no estilos custom nuestros. */
+@import "react-datepicker/dist/react-datepicker.css";
+
 /* ─── Custom Theme Tokens ─── */
 @theme {
   /* ─── Font Family ───

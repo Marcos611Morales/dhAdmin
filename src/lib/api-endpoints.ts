@@ -25,4 +25,5 @@ export const DASHBOARD_ENDPOINTS = {
 
 export const USER_ENDPOINTS = {
   LIST: '/admin/users',
+  CREATE: '/admin/users',
 } as const
