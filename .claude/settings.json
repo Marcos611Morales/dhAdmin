@@ -6,7 +6,8 @@
     ],
     "additionalDirectories": [
       "/Users/marcosmorales/Documents/DH/SuperAdminWeb/direct-healthcare-admin/src",
-      "/Users/marcosmorales/Documents/DH/SuperAdminWeb/direct-healthcare-admin/src/features/users"
+      "/Users/marcosmorales/Documents/DH/SuperAdminWeb/direct-healthcare-admin/src/features/users",
+      "/Users/marcosmorales/Documents/DH/SuperAdminWeb/direct-healthcare-admin/src/features/providers"
     ]
   }
 }

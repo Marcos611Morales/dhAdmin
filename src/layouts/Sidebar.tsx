@@ -55,7 +55,15 @@ const NAV_ITEMS: NavItem[] = [
       { label: 'Add new User', path: '/admin/users/new' },
     ],
   },
-  { label: 'Providers', path: '/admin/providers', icon: IconStethoscope },
+  {
+    label: 'Providers',
+    path: '/admin/providers',
+    icon: IconStethoscope,
+    children: [
+      { label: 'View all Providers', path: '/admin/providers' },
+      { label: 'Add new Provider', path: '/admin/providers/new' },
+    ],
+  },
   { label: 'Appointments', path: '/admin/appointments', icon: IconCalendar },
   { label: 'Locations', path: '/admin/locations', icon: IconMapPin },
   { label: 'Specialties', path: '/admin/specialties', icon: IconStar },

@@ -27,3 +27,16 @@ export const USER_ENDPOINTS = {
   LIST: '/admin/users',
   CREATE: '/admin/users',
 } as const
+
+export const PROVIDER_ENDPOINTS = {
+  LIST: '/admin/providers',
+  CREATE: '/admin/providers',
+} as const
+
+export const SPECIALTY_ENDPOINTS = {
+  LIST: '/admin/specialties',
+} as const
+
+export const LOCATION_ENDPOINTS = {
+  LIST: '/admin/locations',
+} as const

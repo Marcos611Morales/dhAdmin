@@ -566,14 +566,12 @@ Lista paginada de todos los usuarios del sistema.
 
 **Query Params adicionales:**
 
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
-| page | integer | 1 | Page number (min: 1) |
-| limit | integer | 50 | Items per page (min: 1, max: 50) |
-| search | string | - | Search in first_name, last_name, email (case-insensitive) |
-| gender | string | - | Filter by gender (male, female, non_binary, other, prefer_not_to_say) |
-| isEmailVerified | boolean | - | Filter by email verification status |
-| includeDeleted | boolean | false | If true, includes soft-deleted users (deleted_at is not null) |
+| Param | Tipo | Descripcion |
+|-------|------|-------------|
+| search | string | Busca en first_name, last_name, email (case-insensitive) |
+| gender | string | Filtra por gender (male, female, non_binary, other, prefer_not_to_say) |
+| isEmailVerified | boolean | Filtra por estado de verificacion |
+| includeDeleted | boolean | Si es true, incluye usuarios con soft delete (default: false) |
 
 **Response: 200 OK**
 ```json
@@ -794,14 +792,16 @@ Lista paginada de todos los providers.
 
 **Query Params adicionales:**
 
-| Param | Tipo | Descripcion |
-|-------|------|-------------|
-| search | string | Busca en first_name, last_name (case-insensitive) |
-| specialty | string (UUID) | Filtra por specialty_id |
-| location | string (UUID) | Filtra por location_id |
-| gender | string | Filtra por gender |
-| status | string | Filtra por status (available, unavailable) |
-| includeDeleted | boolean | Si es true, incluye providers con soft delete (default: false) |
+| Param | Tipo | Default | Descripcion |
+|-------|------|---------|-------------|
+| page | integer | 1 | Numero de pagina (min: 1) |
+| limit | integer | 50 | Items por pagina (min: 1, max: 50) |
+| search | string | - | Busca en first_name, last_name (case-insensitive) |
+| specialty | string (UUID) | - | Filtra por specialty_id |
+| location | string (UUID) | - | Filtra por location_id |
+| gender | string | - | Filtra por gender |
+| status | string | - | Filtra por status (available, unavailable) |
+| includeDeleted | boolean | false | Si es true, incluye providers con soft delete |
 
 **Response: 200 OK**
 ```json
@@ -843,6 +843,15 @@ Lista paginada de todos los providers.
   "totalPages": 4
 }
 ```
+
+**Notas de implementacion:**
+- Sin filtro de status por default — devuelve todos los providers (available y unavailable) a menos que se filtre
+- Ordenado por `created_at` DESC (mas recientes primero)
+- Search usa `ILIKE` para matching parcial case-insensitive en first_name y last_name del provider
+- Joins: specialty, location, insurances (ManyToMany), languages (ManyToMany)
+- `insurances` y `languages` se devuelven como arrays de strings (solo nombres, no objetos)
+- Providers soft-deleted excluidos por default; pasar `?includeDeleted=true` para incluirlos
+- Archivos: `admin-providers.controller.ts`, `admin-providers.service.ts`, `admin-providers.module.ts`, `dto/list-admin-providers.dto.ts`
 
 ---
 
@@ -1115,22 +1124,31 @@ Elimina un time slot especifico. Solo se pueden eliminar slots con status `avail
 
 #### GET `/api/admin/appointments`
 
-Lista paginada de TODAS las citas del sistema.
+Lista paginada de citas del sistema. **Por default retorna solo las citas con status `upcoming`.**
 
 **Auth requerida:** Si
 
+**Estado de implementacion:** ✅ Implementado
+
 **Query Params adicionales:**
 
-| Param | Tipo | Descripcion |
-|-------|------|-------------|
-| search | string | Busca en nombre del paciente, nombre del provider, razon |
-| status | string | Filtra por status (upcoming, past, cancelled) |
-| userId | string (UUID) | Filtra por usuario especifico |
-| providerId | string (UUID) | Filtra por provider especifico |
-| locationId | string (UUID) | Filtra por location |
-| dateFrom | string (YYYY-MM-DD) | Citas desde esta fecha |
-| dateTo | string (YYYY-MM-DD) | Citas hasta esta fecha |
-| includeDeleted | boolean | Si es true, incluye citas con soft delete (default: false) |
+| Param | Tipo | Default | Descripcion |
+|-------|------|---------|-------------|
+| search | string | - | Busca en nombre del paciente, nombre del provider, razon (case-insensitive via ILIKE) |
+| status | string | upcoming | Filtra por status (upcoming, past, cancelled) |
+| userId | string (UUID) | - | Filtra por usuario especifico |
+| providerId | string (UUID) | - | Filtra por provider especifico |
+| locationId | string (UUID) | - | Filtra por location |
+| dateFrom | string (YYYY-MM-DD) | - | Citas desde esta fecha |
+| dateTo | string (YYYY-MM-DD) | - | Citas hasta esta fecha |
+| includeDeleted | boolean | false | Si es true, incluye citas con soft delete |
+
+**Notas de implementacion:**
+- El status default es `upcoming` — si no se envia el param, solo se retornan citas upcoming
+- Orden: `appointment_date` DESC, luego `appointment_time` DESC (mas recientes primero)
+- Joins: user, provider (con specialty), location se cargan automaticamente
+- La respuesta incluye `deletedAt` cuando `includeDeleted=true`
+- No se incluye `isFavorite` en la respuesta actual (requiere contexto de usuario)
 
 **Response: 200 OK**
 ```json
