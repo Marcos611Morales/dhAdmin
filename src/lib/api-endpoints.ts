@@ -22,3 +22,7 @@ export const AUTH_ENDPOINTS = {
 export const DASHBOARD_ENDPOINTS = {
   STATS: '/admin/dashboard/stats',
 } as const
+
+export const USER_ENDPOINTS = {
+  LIST: '/admin/users',
+} as const

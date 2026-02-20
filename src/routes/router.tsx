@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from '@/routes/ProtectedRoute'
 import { LoginPage } from '@/pages/LoginPage'
 import { DashboardPage } from '@/pages/DashboardPage'
+import { UsersPage } from '@/pages/UsersPage'
 
 /**
  * Configuración central del router.
@@ -33,8 +34,11 @@ export const router = createBrowserRouter([
         path: 'dashboard',
         element: <DashboardPage />,
       },
+      {
+        path: 'users',
+        element: <UsersPage />,
+      },
       // Futuras rutas protegidas van aquí:
-      // { path: 'users', element: <UsersPage /> },
       // { path: 'providers', element: <ProvidersPage /> },
       // { path: 'appointments', element: <AppointmentsPage /> },
       // { path: 'locations', element: <LocationsPage /> },

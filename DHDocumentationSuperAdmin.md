@@ -446,3 +446,162 @@ Cuando el refresh falla (refresh token también expirado), se usa `window.locati
 | Constante | Ruta | Método | Body | Respuesta |
 |---|---|---|---|---|
 | `AUTH_ENDPOINTS.REFRESH` | `/admin/auth/refresh` | POST | `{ refreshToken }` | `{ accessToken, refreshToken, admin }` |
+
+---
+
+## 2026-02-19 — Sub-menú colapsable en Sidebar
+
+### Problema
+
+El sidebar mostraba todos los items de navegación como links planos. Se necesitaba que "Users" tuviera sub-opciones ("View all users" y "Add new User") que se expandan/colapsen al hacer click.
+
+### Solución implementada
+
+Se añadió soporte para sub-menús en el Sidebar. Los items con `children` se comportan como botones que toggle su sub-menú, mientras los items sin `children` siguen siendo `NavLink` directos.
+
+### Conceptos nuevos usados
+
+**`useState` con lazy initializer:**
+`useState(() => computeInitialValue())` ejecuta la función solo una vez en el primer render, no en cada re-render. Se usa para auto-expandir el sub-menú correcto basándose en la ruta actual (ej: si el usuario recarga la página estando en `/admin/users/new`, "Users" arranca expandido).
+
+**`useLocation()` de react-router-dom:**
+Permite acceder a `location.pathname` fuera de un `NavLink`. Se usa para determinar si un item padre está "activo" (la ruta actual coincide con su path o empieza con él).
+
+**`aria-expanded`:**
+Atributo ARIA que comunica a screen readers si un control expandible está abierto o cerrado. Se añade al botón del item padre.
+
+**`NavLink` con prop `end`:**
+Por defecto, `NavLink` marca como activo si la ruta actual *empieza* con su `to`. Con `end`, solo marca activo si es match *exacto*. Así "View all users" (`/admin/users`) no se marca activo cuando estamos en `/admin/users/new`.
+
+**Type narrowing directo vs. variable intermedia:**
+TypeScript no puede narrowear tipos a través de variables booleanas intermedias. `if (hasChildren)` no funciona para narrowear `item.children`, pero `if (item.children && item.children.length > 0)` sí, porque TypeScript analiza la condición directamente.
+
+### Decisiones de diseño
+
+| Decisión | Opción elegida | Alternativa descartada |
+|---|---|---|
+| Elemento del parent con children | `<button>` (toggle, no navega) | `<NavLink>` con `preventDefault` (semánticamente incorrecto) |
+| Estado expandido | `expandedItem: string \| null` (un solo item a la vez) | `Set<string>` con múltiples expandidos (innecesario, UI más confusa) |
+| Inicialización del expandido | Lazy initializer que busca match en ruta actual | Siempre `null` (malo: sub-menú cerrado al recargar página) |
+| Sidebar colapsado + click en parent | Navega directo al path padre | No hacer nada (malo: item sin children no es clickeable) |
+| Indicador visual de expansión | `IconChevronDown` / `IconChevronRight` | Rotar un solo icono con CSS (más complejo para el mismo resultado) |
+
+### Archivos modificados
+
+| Archivo | Cambio |
+|---|---|
+| `src/layouts/Sidebar.tsx` | Nuevos types `NavChild` y `NavItem` con campo `children` opcional. `expandedItem` state con auto-expand. `handleParentClick()` y `handleSimpleItemClick()`. Parents como `<button>` con chevron, children como `<NavLink end>`. Imports añadidos: `useState`, `ComponentType`, `useLocation`, `IconChevronDown`, `IconChevronRight` |
+
+---
+
+## 2026-02-19 — Users: API hook, tipos y lista paginada (sección 4.3)
+
+### Arquitectura de la feature Users
+
+```
+src/
+├── types/
+│   └── api.ts                    ← NUEVO: PaginatedResponse<T> genérico
+├── features/
+│   └── users/
+│       ├── types.ts              ← Gender type, User interface, UsersQueryParams
+│       ├── utils.ts              ← formatDate(), formatGender()
+│       ├── hooks/
+│       │   └── useUsers.ts       ← Hook con fetch paginado + fetchUsers(params)
+│       ├── components/
+│       │   ├── UsersFilters.tsx   ← Gender select, Email Verified select, search, includeDeleted
+│       │   ├── UsersTable.tsx     ← Tabla con 9 columnas, skeleton, filas clickeables
+│       │   ├── UsersPagination.tsx← Page X of Y, total, botones prev/next
+│       │   └── UserDetailModal.tsx← Popup con foto de perfil y detalles del usuario
+│       └── index.ts              ← Barrel export
+├── pages/
+│   └── UsersPage.tsx             ← Compone filtros + tabla + paginación + modal
+└── routes/
+    └── router.tsx                ← Ruta /admin/users agregada
+```
+
+### Decisiones de diseño
+
+| Decisión | Opción elegida | Alternativa descartada |
+|---|---|---|
+| Tipo paginado | `PaginatedResponse<T>` genérico en `src/types/api.ts` | Interface específica por feature (duplicación) |
+| Gender type | `Gender` type separado de `User` (sin null para filtros) | `User['gender']` directo (incluye null, rompía `<select>`) |
+| Debounce del search | `setTimeout` + `useRef` + cleanup en `useEffect` | Librería externa como lodash.debounce (innecesario para un caso) |
+| Filtros | Controlled components (estado vive en `UsersPage`) | Uncontrolled con refs (el padre no tendría acceso a los valores) |
+| Modal de detalle | Click en fila abre popup con `UserDetailModal` | Navegar a `/admin/users/:id` (el usuario prefirió popup) |
+| Acciones Edit/Delete | `e.stopPropagation()` en los botones | Separar zona clickeable de la fila (más complejo, peor UX) |
+| Count en tabla | Correlativo basado en página: `(page - 1) * limit + index + 1` | Usar `user.id` como contador (no es secuencial) |
+
+### Conceptos nuevos usados
+
+**`PaginatedResponse<T>` — Generics de TypeScript:**
+Un generic permite definir un tipo "parametrizado". `PaginatedResponse<User>` dice "la respuesta paginada donde `data` es un `User[]`". Se reutilizará para providers, appointments, etc. sin duplicar la estructura `{ data, total, page, limit, totalPages }`.
+
+**Debounce con `useRef` + `setTimeout`:**
+El search box no hace un request por cada tecla. `setTimeout` programa la ejecución 300ms después. Si el usuario sigue escribiendo, `clearTimeout` cancela el timer anterior y crea uno nuevo. `useRef` guarda el timer ID entre renders sin causar re-renders (a diferencia de `useState`). El `useEffect` con cleanup asegura que el timer se cancele si el componente se desmonta.
+
+**`e.stopPropagation()`:**
+Los botones de Edit/Delete viven dentro de filas clickeables. Sin `stopPropagation()`, al hacer click en "Delete" también se dispararía el `onClick` de la fila (que abre el modal). `stopPropagation()` detiene la propagación del evento hacia arriba en el DOM.
+
+**Controlled components:**
+Los filtros (`<select>`, `<input>`) reciben su valor como prop (`value={gender}`) y notifican cambios vía callback (`onChange={onGenderChange}`). El estado "real" vive en `UsersPage`. Esto permite que el padre acceda a todos los valores de filtros para construir los query params del API call.
+
+**Foco gestionado en modal:**
+`UserDetailModal` usa `useRef` para referenciar el botón de cerrar y `useEffect` para llamar `.focus()` al montar. Sin esto, el foco quedaría detrás del overlay y usuarios de teclado no sabrían que hay un modal abierto.
+
+**`timeZone: 'UTC'` en `toLocaleDateString`:**
+Sin esto, "1992-07-08" podría mostrarse como "Jul 7, 1992" en timezones negativos. El navegador interpreta la fecha como midnight UTC y al restar horas por el timezone local, retrocede un día.
+
+### Bug corregido: `gender: null` del backend
+
+La API devuelve `gender: null` para usuarios que no han configurado su género. El tipo `User` original definía `gender` como union de strings sin null. Esto causaba `Cannot read properties of null (reading 'replace')` en `formatGender()`.
+
+**Fix:** Se extrajo `Gender` como type separado con los 5 valores válidos. `User.gender` es `Gender | null`, mientras `UsersQueryParams.gender` y los filtros usan `Gender` sin null (no tiene sentido filtrar por null). `formatGender()` ahora devuelve `"—"` si recibe null.
+
+### Tipo compartido
+
+| Archivo | Tipo | Propósito |
+|---|---|---|
+| `src/types/api.ts` | `PaginatedResponse<T>` | Respuesta paginada genérica. Se reutilizará en todas las features con listados |
+
+### Feature: Users (`src/features/users/`)
+
+| Archivo | Propósito |
+|---|---|
+| `types.ts` | `Gender` type (5 valores), `User` interface (12 campos + null handling), `UsersQueryParams` (6 params opcionales) |
+| `utils.ts` | `formatDate()` — ISO → "Jul 8, 1992" con UTC. `formatGender()` — snake_case → "Capitalizado", null → "—" |
+| `hooks/useUsers.ts` | Hook con fetch automático al montar + `fetchUsers(params?)` para re-fetch. `useCallback` para referencia estable |
+| `components/UsersFilters.tsx` | 4 filtros controlled: Gender select, Email Verified select, Include Deleted checkbox, Search input con icono |
+| `components/UsersTable.tsx` | Tabla 9 columnas: #, nombre, email, DOB, gender, verified (badge verde/rojo), edit + delete icons. Skeleton loader |
+| `components/UsersPagination.tsx` | "X total users" + "Page X of Y" + botones prev/next con disabled states |
+| `components/UserDetailModal.tsx` | Popup: foto de perfil (o placeholder), nombre, email, DOB, gender, verified, created, deleted. Cierra con Escape/overlay/botón X |
+| `index.ts` | Barrel export: `useUsers`, `User`, `Gender`, `UsersQueryParams` |
+
+### Página
+
+| Archivo | Propósito |
+|---|---|
+| `src/pages/UsersPage.tsx` | Compone todos los componentes. Título "USERS", filtros, tabla, paginación, modal. Debounce 300ms en search. `handleEdit` y `handleDelete` como placeholder para implementación futura |
+
+### Archivos modificados
+
+| Archivo | Cambio |
+|---|---|
+| `src/lib/api-endpoints.ts` | Agregado `USER_ENDPOINTS.LIST` (`/admin/users`) |
+| `src/routes/router.tsx` | Agregada ruta `users` → `UsersPage` dentro de rutas protegidas |
+
+### Estructura de rutas actualizada
+
+| Ruta | Componente | Layout | Acceso |
+|---|---|---|---|
+| `/admin/login` | `LoginPage` | `AuthLayout` (centrado) | Público |
+| `/admin` | Redirect → `/admin/dashboard` | — | — |
+| `/admin/dashboard` | `DashboardPage` | `AdminLayout` (sidebar + header) | Protegido |
+| `/admin/users` | `UsersPage` | `AdminLayout` (sidebar + header) | Protegido |
+| `*` | Redirect → `/admin/login` | — | — |
+
+### Endpoints de API utilizados
+
+| Constante | Ruta | Método | Query Params | Respuesta |
+|---|---|---|---|---|
+| `USER_ENDPOINTS.LIST` | `/admin/users` | GET | `page`, `limit`, `search`, `gender`, `isEmailVerified`, `includeDeleted` | `PaginatedResponse<User>` |

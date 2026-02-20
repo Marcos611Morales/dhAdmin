@@ -2,6 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(pnpm add:*)"
+    ],
+    "additionalDirectories": [
+      "/Users/marcosmorales/Documents/DH/SuperAdminWeb/direct-healthcare-admin/src",
+      "/Users/marcosmorales/Documents/DH/SuperAdminWeb/direct-healthcare-admin/src/features/users"
     ]
   }
 }

@@ -566,12 +566,14 @@ Lista paginada de todos los usuarios del sistema.
 
 **Query Params adicionales:**
 
-| Param | Tipo | Descripcion |
-|-------|------|-------------|
-| search | string | Busca en first_name, last_name, email (case-insensitive) |
-| gender | string | Filtra por gender (male, female, non_binary, other, prefer_not_to_say) |
-| isEmailVerified | boolean | Filtra por estado de verificacion |
-| includeDeleted | boolean | Si es true, incluye usuarios con soft delete (default: false) |
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| page | integer | 1 | Page number (min: 1) |
+| limit | integer | 50 | Items per page (min: 1, max: 50) |
+| search | string | - | Search in first_name, last_name, email (case-insensitive) |
+| gender | string | - | Filter by gender (male, female, non_binary, other, prefer_not_to_say) |
+| isEmailVerified | boolean | - | Filter by email verification status |
+| includeDeleted | boolean | false | If true, includes soft-deleted users (deleted_at is not null) |
 
 **Response: 200 OK**
 ```json
