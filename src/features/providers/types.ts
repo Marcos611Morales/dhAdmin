@@ -70,3 +70,33 @@ export interface ProvidersQueryParams {
   gender?: ProviderGender
   includeDeleted?: boolean
 }
+
+/**
+ * Body del POST /api/admin/providers para crear un nuevo provider.
+ *
+ * Mapea exactamente lo que espera el backend.
+ * `specialtyId` y `locationId` son UUIDs — los dropdowns
+ * del formulario envían el UUID seleccionado.
+ *
+ * Validaciones del backend:
+ * - firstName: required, max 50
+ * - lastName: required, max 50
+ * - title: optional, max 20
+ * - specialtyId: required, UUID válido
+ * - locationId: required, UUID válido
+ * - profileImageUrl: optional, URL válida
+ * - gender: optional, valor de gender_type enum
+ * - bio: optional, texto libre
+ * - appointmentPrice: optional, >= 0
+ */
+export interface CreateProviderPayload {
+  firstName: string
+  lastName: string
+  specialtyId: string
+  locationId: string
+  title?: string
+  profileImageUrl?: string
+  gender?: ProviderGender
+  bio?: string
+  appointmentPrice?: number
+}

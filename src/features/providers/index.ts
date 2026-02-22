@@ -1,6 +1,7 @@
 export { useProviders } from './hooks/useProviders'
+export { useCreateProvider } from './hooks/useCreateProvider'
 export { useSpecialties } from './hooks/useSpecialties'
 export { useLocations } from './hooks/useLocations'
-export type { Provider, ProviderGender, ProvidersQueryParams } from './types'
+export type { Provider, ProviderGender, ProvidersQueryParams, CreateProviderPayload } from './types'
 export type { Specialty } from './hooks/useSpecialties'
 export type { Location } from './hooks/useLocations'

@@ -790,6 +790,8 @@ Lista paginada de todos los providers.
 
 **Auth requerida:** Si
 
+**Estado de implementacion:** ✅ Implementado
+
 **Query Params adicionales:**
 
 | Param | Tipo | Default | Descripcion |
@@ -874,6 +876,8 @@ Crea un nuevo provider.
 
 **Auth requerida:** Si
 
+**Estado de implementacion:** ✅ Implementado
+
 **Request Body:**
 ```json
 {
@@ -917,7 +921,16 @@ Crea un nuevo provider.
 
 **Errores:**
 - `400 Bad Request` - Datos invalidos
-- `404 Not Found` - Specialty o location no encontrados
+- `404 Not Found` - Specialty, location, insurance o language no encontrados
+
+**Notas de implementacion:**
+- Valida existencia de specialtyId y locationId antes de crear
+- Valida existencia de todos los insuranceIds y languageIds antes de crear
+- Relaciones ManyToMany (insurances, languages) se guardan via TypeORM cascade en junction tables
+- Despues de guardar, re-fetch con todos los joins para devolver respuesta completa expandida
+- El status por default lo maneja la DB (`available` via column default)
+- Respuesta tiene el mismo shape que los items del GET list (incluye insurances/languages como arrays de strings)
+- Archivos modificados: `admin-providers.controller.ts`, `admin-providers.service.ts`, `admin-providers.module.ts`, nuevo `dto/create-admin-provider.dto.ts`
 
 ---
 
@@ -1303,11 +1316,15 @@ Lista paginada de todas las locations.
 
 **Auth requerida:** Si
 
+**Estado de implementacion:** ✅ Implementado
+
 **Query Params adicionales:**
 
-| Param | Tipo | Descripcion |
-|-------|------|-------------|
-| search | string | Busca en city, state, display_name (case-insensitive) |
+| Param | Tipo | Default | Descripcion |
+|-------|------|---------|-------------|
+| page | integer | 1 | Numero de pagina (min: 1) |
+| limit | integer | 50 | Items por pagina (min: 1, max: 50) |
+| search | string | - | Busca en city, state, display_name (case-insensitive) |
 
 **Response: 200 OK**
 ```json
@@ -1328,6 +1345,11 @@ Lista paginada de todas las locations.
   "totalPages": 1
 }
 ```
+
+**Notas de implementacion:**
+- Ordenado alfabeticamente por `display_name` ASC
+- Search usa `ILIKE` con logica OR en city, state y display_name
+- Archivos: `admin-locations.controller.ts`, `admin-locations.service.ts`, `admin-locations.module.ts`, `dto/list-admin-locations.dto.ts`
 
 ---
 
@@ -1386,11 +1408,15 @@ Lista paginada de todas las especialidades.
 
 **Auth requerida:** Si
 
+**Estado de implementacion:** ✅ Implementado
+
 **Query Params adicionales:**
 
-| Param | Tipo | Descripcion |
-|-------|------|-------------|
-| search | string | Busca en name (case-insensitive) |
+| Param | Tipo | Default | Descripcion |
+|-------|------|---------|-------------|
+| page | integer | 1 | Numero de pagina (min: 1) |
+| limit | integer | 50 | Items por pagina (min: 1, max: 50) |
+| search | string | - | Busca en name (case-insensitive) |
 
 **Response: 200 OK**
 ```json
@@ -1408,6 +1434,11 @@ Lista paginada de todas las especialidades.
   "totalPages": 1
 }
 ```
+
+**Notas de implementacion:**
+- Ordenado alfabeticamente por `name` ASC
+- Search usa `ILIKE` para matching parcial case-insensitive en name
+- Archivos: `admin-specialties.controller.ts`, `admin-specialties.service.ts`, `admin-specialties.module.ts`, `dto/list-admin-specialties.dto.ts`
 
 ---
 

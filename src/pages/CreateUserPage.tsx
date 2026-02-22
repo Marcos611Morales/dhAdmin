@@ -2,7 +2,7 @@ import { useState } from 'react'
 import DatePicker from 'react-datepicker'
 import { IconLoader2 } from '@tabler/icons-react'
 import { useCreateUser } from '@/features/users/hooks/useCreateUser'
-import { SuccessModal } from '@/features/users/components/SuccessModal'
+import { SuccessModal } from '@/components/ui/SuccessModal'
 import type { Gender, CreateUserPayload } from '@/features/users/types'
 
 /**
