@@ -27,3 +27,16 @@ export interface LocationsQueryParams {
   search?: string
   includeDeleted?: boolean
 }
+
+/**
+ * Payload para POST /api/admin/locations.
+ *
+ * - city: requerido, max 100 chars
+ * - state: requerido, exactamente 2 chars (código de estado, ej: "VA")
+ * - displayName: requerido, max 150 chars, único — se genera como "city, state"
+ */
+export interface CreateLocationPayload {
+  city: string
+  state: string
+  displayName: string
+}

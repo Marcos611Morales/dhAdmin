@@ -39,6 +39,7 @@ export const SPECIALTY_ENDPOINTS = {
 
 export const LOCATION_ENDPOINTS = {
   LIST: '/admin/locations',
+  CREATE: '/admin/locations',
 } as const
 
 export const APPOINTMENT_ENDPOINTS = {
