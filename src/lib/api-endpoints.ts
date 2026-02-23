@@ -43,4 +43,13 @@ export const LOCATION_ENDPOINTS = {
 
 export const APPOINTMENT_ENDPOINTS = {
   LIST: '/admin/appointments',
+  CREATE: '/admin/appointments',
 } as const
+
+/**
+ * Endpoint para time slots de un provider.
+ * Recibe el providerId como parámetro porque la ruta es dinámica.
+ */
+export function providerTimeSlotsUrl(providerId: string): string {
+  return `/admin/providers/${providerId}/time-slots`
+}

@@ -99,3 +99,34 @@ export interface AppointmentsQueryParams {
   dateTo?: string
   includeDeleted?: boolean
 }
+
+/**
+ * Payload para POST /api/admin/appointments.
+ *
+ * Campos requeridos: userId, providerId, locationId, appointmentDate, appointmentTime.
+ * Campos opcionales: timeSlotId, reason, notes.
+ */
+export interface CreateAppointmentPayload {
+  userId: string
+  providerId: string
+  locationId: string
+  appointmentDate: string
+  appointmentTime: string
+  timeSlotId?: string
+  reason?: string
+  notes?: string
+}
+
+/**
+ * Time slot de un provider.
+ * Corresponde a cada objeto en GET /api/admin/providers/:id/time-slots.
+ */
+export interface TimeSlot {
+  id: string
+  slotDate: string
+  startTime: string
+  endTime: string
+  status: 'available' | 'booked' | 'blocked'
+  createdAt: string
+  updatedAt: string
+}
