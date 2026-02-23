@@ -40,3 +40,7 @@ export const SPECIALTY_ENDPOINTS = {
 export const LOCATION_ENDPOINTS = {
   LIST: '/admin/locations',
 } as const
+
+export const APPOINTMENT_ENDPOINTS = {
+  LIST: '/admin/appointments',
+} as const
