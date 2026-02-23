@@ -8,6 +8,7 @@ import { ProvidersPage } from '@/pages/ProvidersPage'
 import { CreateProviderPage } from '@/pages/CreateProviderPage'
 import { AppointmentsPage } from '@/pages/AppointmentsPage'
 import { CreateAppointmentPage } from '@/pages/CreateAppointmentPage'
+import { LocationsPage } from '@/pages/LocationsPage'
 
 /**
  * Configuración central del router.
@@ -63,8 +64,12 @@ export const router = createBrowserRouter([
         path: 'appointments/new',
         element: <CreateAppointmentPage />,
       },
+      {
+        path: 'locations',
+        element: <LocationsPage />,
+      },
       // Futuras rutas protegidas van aquí:
-      // { path: 'locations', element: <LocationsPage /> },
+      // { path: 'locations/new', element: <CreateLocationPage /> },
       // { path: 'specialties', element: <SpecialtiesPage /> },
       // { path: 'faqs', element: <FaqsPage /> },
       // { path: 'contact-submissions', element: <ContactSubmissionsPage /> },

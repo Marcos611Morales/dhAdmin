@@ -73,7 +73,15 @@ const NAV_ITEMS: NavItem[] = [
       { label: 'Create Appointment', path: '/admin/appointments/new' },
     ],
   },
-  { label: 'Locations', path: '/admin/locations', icon: IconMapPin },
+  {
+    label: 'Locations',
+    path: '/admin/locations',
+    icon: IconMapPin,
+    children: [
+      { label: 'View Locations', path: '/admin/locations' },
+      { label: 'Add new Location', path: '/admin/locations/new' },
+    ],
+  },
   { label: 'Specialties', path: '/admin/specialties', icon: IconStar },
   { label: 'FAQs', path: '/admin/faqs', icon: IconQuestionMark },
   { label: 'Contact', path: '/admin/contact-submissions', icon: IconMail },

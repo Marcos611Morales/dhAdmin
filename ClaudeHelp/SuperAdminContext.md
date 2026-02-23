@@ -1034,6 +1034,8 @@ Lista paginada de todas las citas de un provider especifico.
 
 #### GET `/api/admin/providers/:id/time-slots`
 
+Estado de implementacion: ✅ Implementado
+
 Lista paginada de los time slots de un provider.
 
 **Auth requerida:** Si
@@ -1042,6 +1044,8 @@ Lista paginada de los time slots de un provider.
 
 | Param | Tipo | Descripcion |
 |-------|------|-------------|
+| page | number | Pagina (default 1) |
+| limit | number | Items por pagina (default 50, max 50) |
 | date | string (YYYY-MM-DD) | Filtra por fecha especifica |
 | status | string | Filtra por status (available, booked, blocked) |
 
@@ -1065,6 +1069,15 @@ Lista paginada de los time slots de un provider.
   "totalPages": 3
 }
 ```
+
+**Errores:**
+- `404 Not Found` — Provider no encontrado
+- `400 Bad Request` — Parametros invalidos (UUID mal formado, date con formato incorrecto, status invalido)
+
+**Notas de implementacion:**
+- Ordenado por `slot_date ASC`, `start_time ASC`
+- El `:id` del provider se valida como UUID via `ParseUUIDPipe`
+- Si no se envian filtros de `date` o `status`, retorna todos los time slots del provider
 
 ---
 
@@ -1137,7 +1150,7 @@ Elimina un time slot especifico. Solo se pueden eliminar slots con status `avail
 
 #### GET `/api/admin/appointments`
 
-Lista paginada de citas del sistema. **Por default retorna solo las citas con status `upcoming`.**
+Lista paginada de citas del sistema. **Sin filtro de status por default — retorna todas las citas (upcoming, past, cancelled).**
 
 **Auth requerida:** Si
 
@@ -1148,7 +1161,7 @@ Lista paginada de citas del sistema. **Por default retorna solo las citas con st
 | Param | Tipo | Default | Descripcion |
 |-------|------|---------|-------------|
 | search | string | - | Busca en nombre del paciente, nombre del provider, razon (case-insensitive via ILIKE) |
-| status | string | upcoming | Filtra por status (upcoming, past, cancelled) |
+| status | string | - | Filtra por status (upcoming, past, cancelled). Sin default, retorna todos |
 | userId | string (UUID) | - | Filtra por usuario especifico |
 | providerId | string (UUID) | - | Filtra por provider especifico |
 | locationId | string (UUID) | - | Filtra por location |
@@ -1157,7 +1170,7 @@ Lista paginada de citas del sistema. **Por default retorna solo las citas con st
 | includeDeleted | boolean | false | Si es true, incluye citas con soft delete |
 
 **Notas de implementacion:**
-- El status default es `upcoming` — si no se envia el param, solo se retornan citas upcoming
+- Sin filtro de status por default — si no se envia el param, retorna todas las citas (upcoming, past, cancelled)
 - Orden: `appointment_date` DESC, luego `appointment_time` DESC (mas recientes primero)
 - Joins: user, provider (con specialty), location se cargan automaticamente
 - La respuesta incluye `deletedAt` cuando `includeDeleted=true`
@@ -1225,6 +1238,8 @@ Crea una cita para un usuario con un provider.
 
 **Auth requerida:** Si
 
+**Estado de implementacion:** ✅ Implementado
+
 **Request Body:**
 ```json
 {
@@ -1250,7 +1265,21 @@ Crea una cita para un usuario con un provider.
 | reason | string | No | Texto libre |
 | notes | string | No | Texto libre |
 
-**Response: 201 Created** - Objeto de la cita creada
+**Response: 201 Created** - Objeto de la cita creada (mismo shape que los items del GET list)
+
+**Errores:**
+- `400 Bad Request` - Datos invalidos
+- `404 Not Found` - User, provider, location o time slot no encontrados
+- `400 Bad Request` - Time slot no pertenece al provider especificado
+- `400 Bad Request` - Time slot no esta disponible (status != available)
+
+**Notas de implementacion:**
+- Valida existencia de userId, providerId y locationId antes de crear
+- Si se envia timeSlotId: valida que pertenezca al provider, que tenga status `available`, y lo marca como `booked`
+- Si no se envia timeSlotId: crea la cita con time_slot_id = null
+- El status de la cita por default es `upcoming` (manejado por la DB via column default)
+- Despues de guardar, re-fetch con todos los joins (user, provider con specialty, location) para devolver respuesta completa
+- Archivos: `admin-appointments.controller.ts`, `admin-appointments.service.ts`, `admin-appointments.module.ts`, nuevo `dto/create-admin-appointment.dto.ts`
 
 ---
 
